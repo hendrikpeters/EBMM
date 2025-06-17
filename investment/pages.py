@@ -1,27 +1,40 @@
 from otree.api import Page
+from .models import NUMERACY_QUESTIONS
 
-class InvestmentDecision(Page):
+class PostExperimentSurvey(Page):
     form_model = 'player'
-    form_fields = ['choice']
+    form_fields = [
+        'fam_crypto', 'fam_equity', 'fam_bond',
+        'risk_crypto','risk_equity','risk_bond'
+    ]
+
+    def is_displayed(self):
+        return self.round_number == 1
+
+class NumeracyTest(Page):
+    form_model = 'player'
+
+    timeout_seconds = 10
+    # Keine {} mehr – oTree rendert "Verbleibende Zeit: 0:07 Sek."
+    timer_text = "Verbleibende Zeit:"
+    auto_submit = True
+
+    def get_form_fields(self):
+        idx = self.round_number - 1
+        return [f'numq_{idx}']
+
+    def is_displayed(self):
+        return 2 <= self.round_number <= 11
 
     def vars_for_template(self):
-        frame = self.participant.vars['frame_data'][self.round_number - 1]
-        # Jede Option vorbereiten
-        for idx, col in enumerate(frame['columns']):
-            # 1) Outcome-Labels (z.B. "80 % – €2.50")
-            col['outcome_labels'] = [
-                f"{int(prob*100)} % – €{payoff:.2f}"
-                for prob, payoff in zip(col['probs'], col['payoffs'])
-            ]
-            # 2) Display-Label abhängig vom Frame-Typ
-            if frame['frame'] == 'blind':
-                # Asset A, B, C
-                col['display_label'] = f"Asset {chr(65 + idx)}"
-            else:
-                # Namens-Label + (Asset-Klasse)
-                col['display_label'] = f"{col['display_name']} ({col['asset_class'].title()})"
+        idx = self.round_number - 1
         return {
-            'frame': frame,
+            'question_number': idx,
+            'question_text': NUMERACY_QUESTIONS[idx-1],
         }
 
-page_sequence = [InvestmentDecision]
+page_sequence = [
+    # InvestmentDecision ausgesetzt
+    PostExperimentSurvey,   # Runde 1
+    NumeracyTest,           # Runden 2–11
+]

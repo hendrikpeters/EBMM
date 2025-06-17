@@ -1,0 +1,24 @@
+{% extends "global/Page.html" %}
+{% block content %}
+
+<h3>Numeracy Test – Frage {{ question_number }} von 10</h3>
+<p style="font-size:1.2rem; margin:1rem 0;">
+  {{ question_text }}
+</p>
+
+<form>
+  <div class="mb-3">
+    <label for="antwort" class="form-label">Antwort</label>
+    <input
+      type="number"
+      id="antwort"
+      name="numq_{{ question_number }}"
+      step="1"
+      class="form-control"
+      autofocus
+    >
+  </div>
+  {{ next_button }}
+</form>
+
+{% endblock %}

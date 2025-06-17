@@ -5,7 +5,10 @@
 
 <!-- Progress-Bar -->
 <div class="progress-container">
-  <div class="progress-bar" data-width="{{ progress_pct }}"></div>
+  <div
+    class="progress-bar"
+    style="--progress-width: {{ progress_pct }}%;"
+  ></div>
 </div>
 
 <style>
@@ -21,10 +24,8 @@
     height: 100%;
     background: #2196F3;
     transition: width 0.3s ease;
-    width: var(--progress-width, 0%);
-  }
-  .progress-bar[data-width] {
-    --progress-width: attr(data-width %) ;
+    /* hier nehmen wir die CSS-Variable */
+    width: var(--progress-width);
   }
 
   table.simple {

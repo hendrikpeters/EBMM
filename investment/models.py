@@ -36,16 +36,16 @@ OUTCOME_COLORS = ["#2196F3","#FFC107","#9E9E9E"]
 
 # Berlin Numeracy Test Fragen
 NUMERACY_QUESTIONS = [
-    "Von 100 Personen haben 5 % eine seltene Krankheit. Wie viele Personen sind das?",
-    "Aus 1 000 Fahrgästen haben 2 % einen Fahrschein. Wie viele Fahrgäste sind das?",
-    "In einer Urne liegen 50 Kugeln, 20 % davon rot. Wie viele rote Kugeln?",
-    "Ein Test hat eine Trefferquote von 90 %. Wie viele richtige Ergebnisse bei 100 Tests?",
-    "5 % von 200 € sind wie viel Euro?",
-    "20 % von 150 sind wie viel?",
-    "Aus 500 Teilnehmern bestehen 10 %. Wie viele Teilnehmer?",
-    "Wenn 0,5 % der Bevölkerung 1 % einer Gruppe sind, wie viel Prozent bleiben übrig?",
-    "8 % von 125 ergeben wie viel?",
-    "Von 250 Personen haben 4 % blaue Augen. Wie viele Personen?"
+    "Out of 100 people, 5% have a rare disease. How many people is that?",
+    "Out of 1,000 passengers, 2% have a ticket. How many passengers is that?",
+    "In an urn there are 50 balls, 20% of them are red. How many red balls?",
+    "A test has a hit rate of 90%. How many correct results out of 100 tests?",
+    "5% of €200 is how many euros?",
+    "20% of 150 is how much?",
+    "Out of 500 participants, 10% remain. How many participants?",
+    "If 0.5% of the population is 1% of a group, how many percent remain?",
+    "8% of 125 equals how much?",
+    "Out of 250 people, 4% have blue eyes. How many people?"
 ]
 
 def init_participant(pid, seed=None):
@@ -154,17 +154,17 @@ class Player(BasePlayer):
     choice      = models.StringField()
 
     # Survey
-    fam_crypto  = models.IntegerField(label="Wie vertraut sind Sie mit Crypto?",
+    fam_crypto  = models.IntegerField(label="How familiar are you with Crypto?",
         choices=list(range(1,8)), widget=widgets.RadioSelectHorizontal)
-    fam_equity  = models.IntegerField(label="Wie vertraut sind Sie mit Equities?",
+    fam_equity  = models.IntegerField(label="How familiar are you with Equities?",
         choices=list(range(1,8)), widget=widgets.RadioSelectHorizontal)
-    fam_bond    = models.IntegerField(label="Wie vertraut sind Sie mit Bonds?",
+    fam_bond    = models.IntegerField(label="How familiar are you with Bonds?",
         choices=list(range(1,8)), widget=widgets.RadioSelectHorizontal)
-    risk_crypto = models.IntegerField(label="Wie schätzen Sie das Risiko von Crypto ein?",
+    risk_crypto = models.IntegerField(label="How do you assess the risk of Crypto?",
         choices=list(range(1,8)), widget=widgets.RadioSelectHorizontal)
-    risk_equity = models.IntegerField(label="Wie schätzen Sie das Risiko von Equities ein?",
+    risk_equity = models.IntegerField(label="How do you assess the risk of Equities?",
         choices=list(range(1,8)), widget=widgets.RadioSelectHorizontal)
-    risk_bond   = models.IntegerField(label="Wie schätzen Sie das Risiko von Bonds ein?",
+    risk_bond   = models.IntegerField(label="How do you assess the risk of Bonds?",
         choices=list(range(1,8)), widget=widgets.RadioSelectHorizontal)
 
     # Numeracy

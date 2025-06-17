@@ -1,0 +1,46 @@
+# Virtual environments
+venv/
+.env
+.env.*
+
+# oTree / Django
+db.sqlite3
+*.sqlite3
+*.db
+*.db-journal
+_static_root/
+staticfiles/
+__pycache__/
+*.otreezip
+
+# Python bytecode / caches
+*.py[cod]
+__pycache__/
+*.egg-info/
+pip-wheel-metadata/
+
+# Build artifacts
+build/
+dist/
+coverage/
+htmlcov/
+
+# IDEs and editors
+.idea/
+.vscode/
+*~
+
+# Operating system files
+.DS_Store
+
+# Logs and temporary files
+*.log
+merge.ps1
+__temp*/
+
+# Heroku / Procfile (if you ever generate other files)
+# Procfile      # do not ignore if you commit it
+
+# Testing
+.pytest_cache/
+test_results/

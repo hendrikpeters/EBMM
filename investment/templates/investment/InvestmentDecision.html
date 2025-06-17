@@ -1,0 +1,90 @@
+{% extends "global/Page.html" %}
+{% block content %}
+
+<h3>Runde {{ frame.round }} – {{ frame.frame }} Frame</h3>
+
+<style>
+table.simple {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1.5rem;
+    table-layout: fixed;       /* FIXED LAYOUT für gleichmäßige Spalten */
+}
+table.simple th,
+table.simple td {
+    border: 1px solid #ddd;
+    padding: 0.75rem;
+}
+table.simple th {
+    background: #f5f5f5;
+    font-weight: bold;
+}
+
+/* Erste Spalte: Asset, linksbündig, 30 % Breite */
+table.simple th:first-child,
+table.simple td:first-child {
+    width: 30%;
+    text-align: left;
+    padding-left: 1rem;
+}
+/* Payout-Spalten gleichmäßig aufteilen (3 × 23,33 %) */
+table.simple th:nth-child(n+2),
+table.simple td:nth-child(n+2) {
+    width: 23.3333%;
+    text-align: center;
+}
+
+/* Radio + Label immer bündig nebeneinander */
+table.simple td:first-child label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Hover-Effekt */
+table.simple tbody tr:hover {
+    background: #fafafa;
+}
+/* Vergrößertes Radio */
+table.simple input[type="radio"] {
+    transform: scale(1.2);
+    margin: 0;
+}
+</style>
+
+<form>
+  <table class="simple">
+    <thead>
+      <tr>
+        <th>Asset</th>
+        <th>Payout 1</th>
+        <th>Payout 2</th>
+        <th>Payout 3</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for col in frame.columns %}
+      <tr>
+        <td>
+          <label>
+            <input
+              type="radio"
+              name="choice"
+              value="{{ col.asset_class }}"
+              required
+            >
+            {{ col.display_label }}
+          </label>
+        </td>
+        <td>{{ col.outcome_labels.0 }}</td>
+        <td>{{ col.outcome_labels.1 }}</td>
+        <td>{{ col.outcome_labels.2 }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {{ next_button }}
+</form>
+
+{% endblock %}

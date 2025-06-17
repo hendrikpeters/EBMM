@@ -5,8 +5,10 @@
   <div class="progress-bar" data-width="{{ progress_pct }}"></div>
 </div>
 
-<h3>Numeracy Test – Frage {{ question_number }} von 10</h3>
-<p style="font-size:1.2rem;margin:1rem 0;">{{ question_text }}</p>
+<div class="text-center" style="margin-top:2rem;">
+  <h2>Vielen Dank!</h2>
+  <p>Wir danken Ihnen herzlich für Ihre Teilnahme.</p>
+</div>
 
 <style>
   .progress-container {
@@ -26,20 +28,5 @@
     --progress-width: attr(data-width %);
   }
 </style>
-
-<form>
-  <div class="mb-3">
-    <label for="antwort" class="form-label">Antwort</label>
-    <input
-      type="number"
-      id="antwort"
-      name="numq_{{ question_number }}"
-      step="1"
-      class="form-control"
-      autofocus
-    >
-  </div>
-  {{ next_button }}
-</form>
 
 {% endblock %}

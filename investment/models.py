@@ -7,7 +7,7 @@ from otree.api import (
 class Constants(BaseConstants):
     name_in_url       = 'investment'
     players_per_group = None
-    num_rounds        = 32  # 10 blind + 10 named + 1 survey + 10 numeracy + 1 thank you
+    num_rounds        = 34  # 10 blind + 10 named + 1 survey + 10 numeracy + 1 thank you
 
 # Basic lottery parameters
 PROBS = {

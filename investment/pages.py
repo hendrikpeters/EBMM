@@ -3,37 +3,41 @@ from otree.api import Page
 from .models import Constants, NUMERACY_QUESTIONS
 
 class Consent(Page):
-    """Round 1: Obtain consent before anything else."""
+    """Round 1: Informed consent."""
     def is_displayed(self):
         return self.round_number == 1
 
     def vars_for_template(self):
-        # On the consent page, the progress bar sits at 0%
+        # progress = 0%
         return {'progress_pct': "0"}
 
+
 class Instructions(Page):
-    """Round 2: Show instructions/headlines, then proceed."""
+    """Round 2: Brief instructions (no headlines)."""
     def is_displayed(self):
         return self.round_number == 2
 
     def vars_for_template(self):
-        # After instructions, progress is 1/32 rounds complete
         pct = (self.round_number - 1) / Constants.num_rounds * 100
         return {'progress_pct': f"{pct:.0f}"}
+
 
 class InvestmentDecision(Page):
     form_model = 'player'
     form_fields = ['choice']
 
     def is_displayed(self):
-        # Now investment starts on round 3 through round 22 (20 frames)
+        # rounds 3–22 inclusive
         return 3 <= self.round_number <= 22
 
     def vars_for_template(self):
-        frame = self.participant.vars['frame_data'][self.round_number - 3]
-        display_round = math.ceil((self.round_number - 2) / 2)
+        # display 1–20
+        display_round = self.round_number - 2
+
+        # progress from 2 intro pages up to this page
         progress_pct = (self.round_number - 1) / Constants.num_rounds * 100
 
+        frame = self.participant.vars['frame_data'][self.round_number - 3]
         columns = []
         for opt in frame['columns']:
             labels = [
@@ -53,11 +57,12 @@ class InvestmentDecision(Page):
             'progress_pct':  f"{progress_pct:.0f}",
         }
 
+
 class PostExperimentSurvey(Page):
     form_model = 'player'
     form_fields = [
         'fam_crypto', 'fam_equity', 'fam_bond',
-        'risk_crypto','risk_equity','risk_bond',
+        'risk_crypto', 'risk_equity', 'risk_bond',
     ]
 
     def is_displayed(self):
@@ -67,14 +72,15 @@ class PostExperimentSurvey(Page):
         pct = (self.round_number - 1) / Constants.num_rounds * 100
         return {'progress_pct': f"{pct:.0f}"}
 
+
 class NumeracyTest(Page):
     form_model = 'player'
     timeout_seconds = 10
-    timer_text      = "Time remaining:"
+    timer_text      = "Verbleibende Zeit:"
     auto_submit     = True
 
     def is_displayed(self):
-        # rounds 24–33 inclusive (10 items)
+        # rounds 24–33 inclusive
         return 24 <= self.round_number <= 33
 
     def get_form_fields(self):
@@ -86,23 +92,24 @@ class NumeracyTest(Page):
         pct = (self.round_number - 1) / Constants.num_rounds * 100
         return {
             'question_number': idx,
-            'question_text':   NUMERACY_QUESTIONS[idx-1],
+            'question_text':   NUMERACY_QUESTIONS[idx - 1],
             'progress_pct':    f"{pct:.0f}"
         }
 
+
 class ThankYou(Page):
     def is_displayed(self):
-        return self.round_number == Constants.num_rounds
+        return self.round_number == Constants.num_rounds  # now 34
 
     def vars_for_template(self):
-        # Force the bar to 100% on the final page
         return {'progress_pct': "100"}
 
+
 page_sequence = [
-    Consent,               # Round 1
-    Instructions,          # Round 2
-    InvestmentDecision,    # Rounds 3–22 (20 investment frames)
-    PostExperimentSurvey,  # Round 23
-    NumeracyTest,          # Rounds 24–33
-    ThankYou,              # Round 34 (num_rounds = 34)
+    Consent,               # 1
+    Instructions,          # 2
+    InvestmentDecision,    # 3–22 (20 pages)
+    PostExperimentSurvey,  # 23
+    NumeracyTest,          # 24–33 (10 pages)
+    ThankYou,              # 34
 ]

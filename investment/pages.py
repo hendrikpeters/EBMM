@@ -7,7 +7,6 @@ class InvestmentDecision(Page):
     form_fields = ['choice']
 
     def is_displayed(self):
-        # Zeige alle 20 Investment‐Frames
         return 1 <= self.round_number <= 20
 
     def vars_for_template(self):
@@ -26,7 +25,7 @@ class InvestmentDecision(Page):
                 'outcome_labels': labels,
             })
         return {
-            'display_round': f"{display_round}",
+            'display_round': display_round,
             'frame_name':    frame['frame'],
             'columns':       columns,
             'progress_pct':  f"{progress_pct:.0f}",
@@ -38,8 +37,10 @@ class PostExperimentSurvey(Page):
         'fam_crypto','fam_equity','fam_bond',
         'risk_crypto','risk_equity','risk_bond',
     ]
+
     def is_displayed(self):
         return self.round_number == 21
+
     def vars_for_template(self):
         pct = (self.round_number - 1) / Constants.num_rounds * 100
         return {'progress_pct': f"{pct:.0f}"}
@@ -47,7 +48,7 @@ class PostExperimentSurvey(Page):
 class NumeracyTest(Page):
     form_model = 'player'
     timeout_seconds = 10
-    timer_text      = "Verbleibende Zeit: {} Sek."
+    timer_text      = "Verbleibende Zeit:"
     auto_submit     = True
 
     def is_displayed(self):
@@ -69,6 +70,7 @@ class NumeracyTest(Page):
 class ThankYou(Page):
     def is_displayed(self):
         return self.round_number == Constants.num_rounds
+
     def vars_for_template(self):
         pct = (self.round_number - 1) / Constants.num_rounds * 100
         return {'progress_pct': f"{pct:.0f}"}

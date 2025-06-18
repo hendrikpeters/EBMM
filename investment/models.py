@@ -7,10 +7,9 @@ from otree.api import (
 class Constants(BaseConstants):
     name_in_url       = 'investment'
     players_per_group = None
-    # 20 Investment-Frames + 1 Survey + 10 Numeracy + 1 ThankYou = 32 Runden
-    num_rounds        = 32
+    num_rounds        = 32  # 10 blind + 10 named + 1 survey + 10 numeracy + 1 thank you
 
-# Lotterie-Grunddaten
+# Basic lottery parameters
 PROBS = {
     "crypto": (0.20, 0.10, 0.70),
     "equity": (0.50, 0.20, 0.30),
@@ -27,7 +26,13 @@ LABELS = {
     "bond":   ["US Treasury 10 Y","Bund 5 Y","UK Gilt 2 Y","OAT 8 Y","JGB 3 Y"],
 }
 
-# Numeracy-Test Fragen
+ASSET_LABEL_MAP = {
+    "crypto": "Asset A",
+    "equity": "Asset B",
+    "bond":   "Asset C",
+}
+
+# Numeracy questions
 NUMERACY_QUESTIONS = [
     "Out of 100 people, 5% have a rare disease. How many people is that?",
     "Out of 1,000 passengers, 2% have a ticket. How many passengers is that?",
@@ -43,72 +48,89 @@ NUMERACY_QUESTIONS = [
 
 def init_participant(pid, seed=None):
     rng = random.Random(seed or pid)
-    frame_order = rng.choice([("blind","named"),("named","blind")])
     label_bags = {k: rng.sample(v, len(v)) for k, v in LABELS.items()}
-    return {"rng": rng, "frame_order": frame_order, "label_bags": label_bags}
+    return {"rng": rng, "label_bags": label_bags}
 
-def next_label(state, ac):
-    bag = state["label_bags"][ac]
+def next_label(state, asset_class):
+    bag = state["label_bags"][asset_class]
     if not bag:
-        bag[:] = state["rng"].sample(LABELS[ac], len(LABELS[ac]))
+        bag[:] = state["rng"].sample(LABELS[asset_class], len(LABELS[asset_class]))
     return bag.pop()
 
 def build_lotteries(state):
+    """Build 10 rounds of lottery specs (first 5 fixed, next 5 scaled)."""
     rng = state["rng"]
     rounds = []
-    # Runden 1–5: feste Payoffs
+    # Rounds 1–5: fixed payoffs
     for _ in range(5):
-        row = {
+        spec = {
             ac: {
                 "probs":   PROBS[ac],
                 "payoffs": PAYMENTS[ac],
                 "label":   next_label(state, ac),
             }
-            for ac in ("crypto","equity","bond")
+            for ac in PROBS
         }
-        rounds.append(row)
-    # Runden 6–10: skalierte Payoffs
+        rounds.append(spec)
+    # Rounds 6–10: scaled payoffs
     for _ in range(5):
         s = rng.uniform(0.85, 1.20)
-        row = {
+        spec = {
             ac: {
                 "probs":   PROBS[ac],
                 "payoffs": tuple(round(p * s, 2) for p in PAYMENTS[ac]),
                 "label":   next_label(state, ac),
             }
-            for ac in ("crypto","equity","bond")
+            for ac in PROBS
         }
-        rounds.append(row)
+        rounds.append(spec)
     return rounds
 
 def make_frames(state, lotteries):
+    """
+    First build 10 blind frames (random order but fixed Asset A/B/C labels),
+    then 10 named frames (random order with real labels).
+    """
     frames = []
-    for idx, spec in enumerate(lotteries, start=1):
-        orders = [state["rng"].sample(["crypto","equity","bond"], 3) for _ in range(2)]
-        for f_idx, frame_name in enumerate(state["frame_order"]):
-            cols = []
-            for c_i, ac in enumerate(orders[f_idx]):
-                cols.append({
-                    "asset_class": ac,
-                    "display_name": (
-                        f"Asset {chr(65+c_i)}"
-                        if frame_name == "blind"
-                        else f"{spec[ac]['label']} ({ac.title()})"
-                    ),
-                    "probs":   spec[ac]["probs"],
-                    "payoffs": spec[ac]["payoffs"],
-                })
-            frames.append({
-                "round":   idx,
-                "frame":   frame_name,
-                "columns": cols,
+    rng = state["rng"]
+
+    # 10 blind frames
+    for spec in lotteries:
+        order = rng.sample(list(PROBS), k=3)
+        cols = []
+        for ac in order:
+            cols.append({
+                "asset_class": ac,
+                "display_name": ASSET_LABEL_MAP[ac],
+                "probs":       spec[ac]["probs"],
+                "payoffs":     spec[ac]["payoffs"],
             })
+        frames.append({"frame": "blind", "columns": cols})
+
+    # 10 named frames
+    for spec in lotteries:
+        order = rng.sample(list(PROBS), k=3)
+        cols = []
+        for ac in order:
+            cols.append({
+                "asset_class": ac,
+                "display_name": f"{spec[ac]['label']} ({ac.title()})",
+                "probs":       spec[ac]["probs"],
+                "payoffs":     spec[ac]["payoffs"],
+            })
+        frames.append({"frame": "named", "columns": cols})
+
+    # assign round numbers 1–20
+    for i, f in enumerate(frames, start=1):
+        f["round"] = i
+
     return frames
 
 def generate_participant_tables(pid, seed=None):
     state = init_participant(pid, seed)
     lotteries = build_lotteries(state)
     return make_frames(state, lotteries)
+
 
 class Subsession(BaseSubsession):
     def creating_session(self):
@@ -117,46 +139,42 @@ class Subsession(BaseSubsession):
                 p.participant.id_in_session
             )
 
+
 class Group(BaseGroup):
     pass
 
+
 class Player(BasePlayer):
-    # Investment Choice
+    # Investment choice
     choice      = models.StringField()
 
-    # Post-Experiment Survey
+    # Post-experiment survey
     fam_crypto  = models.IntegerField(
         label="How familiar are you with Crypto?",
-        choices=list(range(1,8)),
-        widget=widgets.RadioSelectHorizontal
+        choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal
     )
     fam_equity  = models.IntegerField(
         label="How familiar are you with Equities?",
-        choices=list(range(1,8)),
-        widget=widgets.RadioSelectHorizontal
+        choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal
     )
     fam_bond    = models.IntegerField(
         label="How familiar are you with Bonds?",
-        choices=list(range(1,8)),
-        widget=widgets.RadioSelectHorizontal
+        choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal
     )
     risk_crypto = models.IntegerField(
         label="How do you assess the risk of Crypto?",
-        choices=list(range(1,8)),
-        widget=widgets.RadioSelectHorizontal
+        choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal
     )
     risk_equity = models.IntegerField(
         label="How do you assess the risk of Equities?",
-        choices=list(range(1,8)),
-        widget=widgets.RadioSelectHorizontal
+        choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal
     )
     risk_bond   = models.IntegerField(
         label="How do you assess the risk of Bonds?",
-        choices=list(range(1,8)),
-        widget=widgets.RadioSelectHorizontal
+        choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal
     )
 
-    # Numeracy Test
+    # Numeracy test
     numq_1   = models.IntegerField(blank=True)
     numq_2   = models.IntegerField(blank=True)
     numq_3   = models.IntegerField(blank=True)

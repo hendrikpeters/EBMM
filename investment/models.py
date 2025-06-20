@@ -123,23 +123,20 @@ LABELS = {
         "Sachsen 6Y (Sachsen, Bond)",
         "Hessen 3Y (Hessen, Bond)",
         "Nordrhein-Westfalen 9Y (Nordrhein-Westfalen, Bond)",
-        "Berlin 5Y (Berlin, Bond)",
+        "Vistorius Corp. 5Y (Berlin, Bond)",
     ],
 }
-
 
 def init_participant(pid, seed=None):
     rng = random.Random(seed or pid)
     label_bags = {k: rng.sample(v, len(v)) for k, v in LABELS.items()}
     return {"rng": rng, "label_bags": label_bags}
 
-
 def next_label(state, ac):
     bag = state["label_bags"][ac]
     if not bag:
         bag[:] = state["rng"].sample(LABELS[ac], len(LABELS[ac]))
     return bag.pop()
-
 
 def make_frames(state):
     rng = state["rng"]
@@ -172,7 +169,15 @@ def make_frames(state):
         order = rng.sample(list(scen["PROBS"].keys()), k=3)
         cols = [{
             "asset_class": ac,
-            "display_name": f"{next_label(state, ac)} ({ac.title()})",
+            # <— SHOW EXACT LABEL, no extra "(Bond)" suffix
+            "display_name": scen["LABEL"] if False else next_label(state, ac),
+            "probs":        scen["PROBS"][ac],
+            "payoffs":      scen["PAYMENTS"][ac],
+        } for ac in order]
+        # Actually, use the label pool directly:
+        cols = [{
+            "asset_class": ac,
+            "display_name": next_label(state, ac),
             "probs":        scen["PROBS"][ac],
             "payoffs":      scen["PAYMENTS"][ac],
         } for ac in order]
@@ -183,7 +188,7 @@ def make_frames(state):
         order = rng.sample(list(scen["PROBS"].keys()), k=3)
         cols = [{
             "asset_class": ac,
-            "display_name": f"{next_label(state, ac)} ({ac.title()})",
+            "display_name": next_label(state, ac),
             "probs":        scen["PROBS"][ac],
             "payoffs":      tuple(round(x * m, 2) for x in scen["PAYMENTS"][ac]),
         } for ac in order]
@@ -195,11 +200,9 @@ def make_frames(state):
 
     return frames
 
-
 def generate_participant_tables(pid, seed=None):
     state = init_participant(pid, seed)
     return make_frames(state)
-
 
 class Subsession(BaseSubsession):
     def creating_session(self):
@@ -208,41 +211,44 @@ class Subsession(BaseSubsession):
                 p.participant.id_in_session
             )
 
-
 class Group(BaseGroup):
     pass
 
-
 class Player(BasePlayer):
     choice      = models.StringField()
-
+    # Post‐experiment survey
     fam_crypto  = models.IntegerField(
         label="How familiar are you with cryptocurrencies?",
-        choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal)
+        choices=list(range(1,8)), widget=widgets.RadioSelectHorizontal
+    )
     fam_equity  = models.IntegerField(
         label="How familiar are you with equities (e.g., stocks)?",
-        choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal)
+        choices=list(range(1,8)), widget=widgets.RadioSelectHorizontal
+    )
     fam_bond    = models.IntegerField(
         label="How familiar are you with bonds (e.g., government or corporate)?",
-        choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal)
+        choices=list(range(1,8)), widget=widgets.RadioSelectHorizontal
+    )
     risk_crypto = models.IntegerField(
         label="How financially risky do you consider cryptocurrencies to be?",
-        choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal)
+        choices=list(range(1,8)), widget=widgets.RadioSelectHorizontal
+    )
     risk_equity = models.IntegerField(
         label="How financially risky do you consider equities to be?",
-        choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal)
+        choices=list(range(1,8)), widget=widgets.RadioSelectHorizontal
+    )
     risk_bond   = models.IntegerField(
         label="How financially risky do you consider bonds to be?",
-        choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal)
-
-    # Numeracy fields
-    numq_1   = models.IntegerField(blank=True)
-    numq_2   = models.IntegerField(blank=True)
-    numq_3   = models.IntegerField(blank=True)
-    numq_4   = models.IntegerField(blank=True)
-    numq_5   = models.IntegerField(blank=True)
-    numq_6   = models.IntegerField(blank=True)
-    numq_7   = models.IntegerField(blank=True)
-    numq_8   = models.IntegerField(blank=True)
-    numq_9   = models.IntegerField(blank=True)
-    numq_10  = models.IntegerField(blank=True)
+        choices=list(range(1,8)), widget=widgets.RadioSelectHorizontal
+    )
+    # Numeracy test fields
+    numq_1  = models.IntegerField(blank=True)
+    numq_2  = models.IntegerField(blank=True)
+    numq_3  = models.IntegerField(blank=True)
+    numq_4  = models.IntegerField(blank=True)
+    numq_5  = models.IntegerField(blank=True)
+    numq_6  = models.IntegerField(blank=True)
+    numq_7  = models.IntegerField(blank=True)
+    numq_8  = models.IntegerField(blank=True)
+    numq_9  = models.IntegerField(blank=True)
+    numq_10 = models.IntegerField(blank=True)

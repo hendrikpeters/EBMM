@@ -33,7 +33,7 @@ PAYMENTS_BASE = {
     "bond":   (2.50,  0.00, -0.50),
 }
 
-# --- Your Four Additional Scenarios ---
+# --- Your Four Additional Scenarios (each gives 5 distinct rounds) ---
 SCENARIOS = [
     {
         "name": "Baseline",
@@ -97,12 +97,7 @@ SCENARIOS = [
 # --- Fixed multipliers for Rounds 6–10 & 16–20 ---
 MULTIPLIERS = [0.25, 2, 5, 7, 9.5]
 
-# --- Label maps ---
-ASSET_LABEL_MAP = {
-    "crypto": "Asset A",
-    "equity": "Asset B",
-    "bond":   "Asset C",
-}
+# --- Label pools for named frames ---
 LABELS = {
     "crypto": [
         "Zypherium (ZPH, Cryptocurrency)",
@@ -123,82 +118,91 @@ LABELS = {
         "Sachsen 6Y (Sachsen, Bond)",
         "Hessen 3Y (Hessen, Bond)",
         "Nordrhein-Westfalen 9Y (Nordrhein-Westfalen, Bond)",
-        "Vistorius Corp. 5Y (Berlin, Bond)",
+        "Berlin 5Y (Berlin, Bond)",
     ],
+}
+
+ASSET_LABEL_MAP = {
+    "crypto": "Asset A",
+    "equity": "Asset B",
+    "bond":   "Asset C",
 }
 
 def init_participant(pid, seed=None):
     rng = random.Random(seed or pid)
+    # shuffle each label pool for named frames
     label_bags = {k: rng.sample(v, len(v)) for k, v in LABELS.items()}
-    return {"rng": rng, "label_bags": label_bags}
+    # decide block order: first 20 blind-then-named or named-then-blind
+    frame_order = rng.choice([("blind","named"), ("named","blind")])
+    return {"rng": rng, "label_bags": label_bags, "frame_order": frame_order}
 
-def next_label(state, ac):
-    bag = state["label_bags"][ac]
+def next_label(state, asset_class):
+    bag = state["label_bags"][asset_class]
     if not bag:
-        bag[:] = state["rng"].sample(LABELS[ac], len(LABELS[ac]))
+        bag[:] = state["rng"].sample(LABELS[asset_class], len(LABELS[asset_class]))
     return bag.pop()
 
 def make_frames(state):
     rng = state["rng"]
-    frames = []
+    blind_noscale = []
+    blind_scale   = []
+    named_noscale = []
+    named_scale   = []
 
     # 1) Blind, no scale (5 rounds)
     for scen in SCENARIOS:
-        order = rng.sample(list(scen["PROBS"].keys()), k=3)
+        order = rng.sample(list(scen["PROBS"].keys()), 3)
         cols = [{
             "asset_class": ac,
             "display_name": ASSET_LABEL_MAP[ac],
             "probs":        scen["PROBS"][ac],
             "payoffs":      scen["PAYMENTS"][ac],
         } for ac in order]
-        frames.append({"frame": "blind", "columns": cols})
+        blind_noscale.append({"frame":"blind","columns":cols})
 
-    # 2) Blind, scale (5 rounds)
+    # 2) Blind, scaled (5 rounds)
     for scen, m in zip(SCENARIOS, MULTIPLIERS):
-        order = rng.sample(list(scen["PROBS"].keys()), k=3)
+        order = rng.sample(list(scen["PROBS"].keys()), 3)
         cols = [{
             "asset_class": ac,
             "display_name": ASSET_LABEL_MAP[ac],
             "probs":        scen["PROBS"][ac],
-            "payoffs":      tuple(round(x * m, 2) for x in scen["PAYMENTS"][ac]),
+            "payoffs":      tuple(round(x*m,2) for x in scen["PAYMENTS"][ac]),
         } for ac in order]
-        frames.append({"frame": "blind", "columns": cols})
+        blind_scale.append({"frame":"blind","columns":cols})
 
     # 3) Named, no scale (5 rounds)
     for scen in SCENARIOS:
-        order = rng.sample(list(scen["PROBS"].keys()), k=3)
-        cols = [{
-            "asset_class": ac,
-            # <— SHOW EXACT LABEL, no extra "(Bond)" suffix
-            "display_name": scen["LABEL"] if False else next_label(state, ac),
-            "probs":        scen["PROBS"][ac],
-            "payoffs":      scen["PAYMENTS"][ac],
-        } for ac in order]
-        # Actually, use the label pool directly:
+        order = rng.sample(list(scen["PROBS"].keys()), 3)
         cols = [{
             "asset_class": ac,
             "display_name": next_label(state, ac),
             "probs":        scen["PROBS"][ac],
             "payoffs":      scen["PAYMENTS"][ac],
         } for ac in order]
-        frames.append({"frame": "named", "columns": cols})
+        named_noscale.append({"frame":"named","columns":cols})
 
-    # 4) Named, scale (5 rounds)
+    # 4) Named, scaled (5 rounds)
     for scen, m in zip(SCENARIOS, MULTIPLIERS):
-        order = rng.sample(list(scen["PROBS"].keys()), k=3)
+        order = rng.sample(list(scen["PROBS"].keys()), 3)
         cols = [{
             "asset_class": ac,
             "display_name": next_label(state, ac),
             "probs":        scen["PROBS"][ac],
-            "payoffs":      tuple(round(x * m, 2) for x in scen["PAYMENTS"][ac]),
+            "payoffs":      tuple(round(x*m,2) for x in scen["PAYMENTS"][ac]),
         } for ac in order]
-        frames.append({"frame": "named", "columns": cols})
+        named_scale.append({"frame":"named","columns":cols})
 
-    # Assign round numbers 1–20
-    for i, f in enumerate(frames, start=1):
-        f["round"] = i
+    # stitch blocks in AB or BA order
+    first, second = state["frame_order"]
+    block_map = {"blind": blind_noscale+blind_scale, "named": named_noscale+named_scale}
+    combined = block_map[first] + block_map[second]
 
-    return frames
+    # assign display rounds 1–20
+    for i, frame in enumerate(combined, start=1):
+        frame["round"] = i
+
+    return combined
 
 def generate_participant_tables(pid, seed=None):
     state = init_participant(pid, seed)
@@ -216,6 +220,7 @@ class Group(BaseGroup):
 
 class Player(BasePlayer):
     choice      = models.StringField()
+
     # Post‐experiment survey
     fam_crypto  = models.IntegerField(
         label="How familiar are you with cryptocurrencies?",
@@ -241,6 +246,7 @@ class Player(BasePlayer):
         label="How financially risky do you consider bonds to be?",
         choices=list(range(1,8)), widget=widgets.RadioSelectHorizontal
     )
+
     # Numeracy test fields
     numq_1  = models.IntegerField(blank=True)
     numq_2  = models.IntegerField(blank=True)

@@ -8,7 +8,6 @@ SESSION_CONFIGS = [
         display_name="EBMM Investment Study (Prototype)",
         num_demo_participants=1,
         app_sequence=['investment'],
-        # description="...",  # optional
     ),
 ]
 

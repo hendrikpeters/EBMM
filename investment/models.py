@@ -1,11 +1,15 @@
+# models.py
+
 import random
 from otree.api import BaseConstants, BaseSubsession, BaseGroup, BasePlayer, models, widgets
 
 class Constants(BaseConstants):
-    name_in_url       = 'investment'
+    name_in_url = 'investment'
     players_per_group = None
-    # 20 investment frames + 1 survey + 10 numeracy + 1 thank you = 32 rounds
-    num_rounds        = 32
+    # Total rounds/pages:
+    # 1 Consent + 1 Instructions + 20 Investment + 1 Survey
+    # + 1 Numeracy Intro + 10 Numeracy + 1 Thank You = 35
+    num_rounds = 35
 
 # --- Numeracy Test Questions ---
 NUMERACY_QUESTIONS = [
@@ -21,27 +25,23 @@ NUMERACY_QUESTIONS = [
     "In a survey of 1,000 people, 40% drink coffee. Of those, 25% prefer espresso. How many people prefer espresso?",
 ]
 
-# --- Baseline PROBS & PAYMENTS ---
-PROBS_BASE = {
-    "crypto": (0.20, 0.10, 0.70),
-    "equity": (0.50, 0.20, 0.30),
-    "bond":   (0.80, 0.10, 0.10),
-}
-PAYMENTS_BASE = {
-    "crypto": (9.50, -2.00, -0.50),
-    "equity": (4.00, -1.80, -0.50),
-    "bond":   (2.50,  0.00, -0.50),
-}
-
-# --- Your Four Additional Scenarios (each gives 5 distinct rounds) ---
+# --- Scenario Definitions (5 scenarios, each yields 5 frames per block, 4 blocks total = 20 decision rounds) ---
 SCENARIOS = [
     {
-        "name": "Baseline",
-        "PROBS": PROBS_BASE,
-        "PAYMENTS": PAYMENTS_BASE,
+        "name": "Scenario 1",
+        "PROBS": {
+            "crypto": (0.20, 0.10, 0.70),
+            "equity": (0.50, 0.20, 0.30),
+            "bond":   (0.80, 0.10, 0.10),
+        },
+        "PAYMENTS": {
+            "crypto": (9.50, -2.00, -0.50),
+            "equity": (4.00, -1.80, -0.50),
+            "bond":   (2.50,  0.00, -0.50),
+        },
     },
     {
-        "name": "Szenario 1",
+        "name": "Scenario 2",
         "PROBS": {
             "bond":   (0.80, 0.10, 0.10),
             "equity": (0.50, 0.30, 0.20),
@@ -54,7 +54,7 @@ SCENARIOS = [
         },
     },
     {
-        "name": "Szenario 2",
+        "name": "Scenario 3",
         "PROBS": {
             "bond":   (0.85, 0.10, 0.05),
             "equity": (0.50, 0.30, 0.20),
@@ -67,7 +67,7 @@ SCENARIOS = [
         },
     },
     {
-        "name": "Szenario 3",
+        "name": "Scenario 4",
         "PROBS": {
             "bond":   (0.90, 0.05, 0.05),
             "equity": (0.45, 0.30, 0.25),
@@ -80,7 +80,7 @@ SCENARIOS = [
         },
     },
     {
-        "name": "Szenario 4",
+        "name": "Scenario 5",
         "PROBS": {
             "bond":   (0.75, 0.20, 0.05),
             "equity": (0.50, 0.30, 0.20),
@@ -96,6 +96,8 @@ SCENARIOS = [
 
 # --- Fixed multipliers for Rounds 6–10 & 16–20 ---
 MULTIPLIERS = [0.25, 2, 5, 7, 9.5]
+
+assert len(SCENARIOS) == len(MULTIPLIERS), "SCENARIOS and MULTIPLIERS must be the same length"
 
 # --- Label pools for named frames ---
 LABELS = {
@@ -128,13 +130,13 @@ ASSET_LABEL_MAP = {
     "bond":   "Asset C",
 }
 
+
 def init_participant(pid, seed=None):
     rng = random.Random(seed or pid)
-    # shuffle each label pool for named frames
     label_bags = {k: rng.sample(v, len(v)) for k, v in LABELS.items()}
-    # decide block order: first 20 blind-then-named or named-then-blind
-    frame_order = rng.choice([("blind","named"), ("named","blind")])
+    frame_order = rng.choice([("blind", "named"), ("named", "blind")])
     return {"rng": rng, "label_bags": label_bags, "frame_order": frame_order}
+
 
 def next_label(state, asset_class):
     bag = state["label_bags"][asset_class]
@@ -142,60 +144,83 @@ def next_label(state, asset_class):
         bag[:] = state["rng"].sample(LABELS[asset_class], len(LABELS[asset_class]))
     return bag.pop()
 
+
 def make_frames(state):
     rng = state["rng"]
     blind_noscale = []
-    blind_scale   = []
+    blind_scale = []
     named_noscale = []
-    named_scale   = []
+    named_scale = []
 
-    # 1) Blind, no scale (5 rounds)
+    # 1) Blind, no scale
     for scen in SCENARIOS:
         order = rng.sample(list(scen["PROBS"].keys()), 3)
         cols = [{
             "asset_class": ac,
             "display_name": ASSET_LABEL_MAP[ac],
-            "probs":        scen["PROBS"][ac],
-            "payoffs":      scen["PAYMENTS"][ac],
+            "probs": scen["PROBS"][ac],
+            "payoffs": scen["PAYMENTS"][ac],
         } for ac in order]
-        blind_noscale.append({"frame":"blind","columns":cols})
+        blind_noscale.append({
+            "frame":            "blind",
+            "scenario_name":    scen["name"],
+            "scale_multiplier": 1.0,
+            "columns":          cols,
+        })
 
-    # 2) Blind, scaled (5 rounds)
+    # 2) Blind, scaled
     for scen, m in zip(SCENARIOS, MULTIPLIERS):
         order = rng.sample(list(scen["PROBS"].keys()), 3)
         cols = [{
             "asset_class": ac,
             "display_name": ASSET_LABEL_MAP[ac],
-            "probs":        scen["PROBS"][ac],
-            "payoffs":      tuple(round(x*m,2) for x in scen["PAYMENTS"][ac]),
+            "probs": scen["PROBS"][ac],
+            "payoffs": tuple(round(x * m, 2) for x in scen["PAYMENTS"][ac]),
         } for ac in order]
-        blind_scale.append({"frame":"blind","columns":cols})
+        blind_scale.append({
+            "frame":            "blind",
+            "scenario_name":    scen["name"],
+            "scale_multiplier": m,
+            "columns":          cols,
+        })
 
-    # 3) Named, no scale (5 rounds)
+    # 3) Named, no scale
     for scen in SCENARIOS:
         order = rng.sample(list(scen["PROBS"].keys()), 3)
         cols = [{
             "asset_class": ac,
             "display_name": next_label(state, ac),
-            "probs":        scen["PROBS"][ac],
-            "payoffs":      scen["PAYMENTS"][ac],
+            "probs": scen["PROBS"][ac],
+            "payoffs": scen["PAYMENTS"][ac],
         } for ac in order]
-        named_noscale.append({"frame":"named","columns":cols})
+        named_noscale.append({
+            "frame":            "named",
+            "scenario_name":    scen["name"],
+            "scale_multiplier": 1.0,
+            "columns":          cols,
+        })
 
-    # 4) Named, scaled (5 rounds)
+    # 4) Named, scaled
     for scen, m in zip(SCENARIOS, MULTIPLIERS):
         order = rng.sample(list(scen["PROBS"].keys()), 3)
         cols = [{
             "asset_class": ac,
             "display_name": next_label(state, ac),
-            "probs":        scen["PROBS"][ac],
-            "payoffs":      tuple(round(x*m,2) for x in scen["PAYMENTS"][ac]),
+            "probs": scen["PROBS"][ac],
+            "payoffs": tuple(round(x * m, 2) for x in scen["PAYMENTS"][ac]),
         } for ac in order]
-        named_scale.append({"frame":"named","columns":cols})
+        named_scale.append({
+            "frame":            "named",
+            "scenario_name":    scen["name"],
+            "scale_multiplier": m,
+            "columns":          cols,
+        })
 
-    # stitch blocks in AB or BA order
     first, second = state["frame_order"]
-    block_map = {"blind": blind_noscale+blind_scale, "named": named_noscale+named_scale}
+    block_map = {
+        "blind": blind_noscale + blind_scale,
+        "named": named_noscale + named_scale,
+    }
     combined = block_map[first] + block_map[second]
 
     # assign display rounds 1–20
@@ -204,9 +229,11 @@ def make_frames(state):
 
     return combined
 
+
 def generate_participant_tables(pid, seed=None):
     state = init_participant(pid, seed)
     return make_frames(state)
+
 
 class Subsession(BaseSubsession):
     def creating_session(self):
@@ -215,39 +242,58 @@ class Subsession(BaseSubsession):
                 p.participant.id_in_session
             )
 
+
 class Group(BaseGroup):
     pass
 
-class Player(BasePlayer):
-    choice      = models.StringField()
 
-    # Post‐experiment survey
-    fam_crypto  = models.IntegerField(
+class Player(BasePlayer):
+    choice = models.StringField()
+
+    # New metadata fields for CSV export
+    scenario_name    = models.StringField()
+    scale_multiplier = models.FloatField()
+    frame_type       = models.StringField()
+
+    def choice_choices(self):
+        frame_index = self.round_number - 3
+        frames = self.participant.vars.get("frame_data", [])
+        if 0 <= frame_index < len(frames):
+            frame = frames[frame_index]
+            return [(col["asset_class"], col["display_name"]) for col in frame["columns"]]
+        return []
+
+    fam_crypto = models.IntegerField(
         label="How familiar are you with cryptocurrencies?",
-        choices=list(range(1,8)), widget=widgets.RadioSelectHorizontal
+        choices=list(range(1, 8)),
+        widget=widgets.RadioSelectHorizontal,
     )
-    fam_equity  = models.IntegerField(
+    fam_equity = models.IntegerField(
         label="How familiar are you with equities (e.g., stocks)?",
-        choices=list(range(1,8)), widget=widgets.RadioSelectHorizontal
+        choices=list(range(1, 8)),
+        widget=widgets.RadioSelectHorizontal,
     )
-    fam_bond    = models.IntegerField(
+    fam_bond = models.IntegerField(
         label="How familiar are you with bonds (e.g., government or corporate)?",
-        choices=list(range(1,8)), widget=widgets.RadioSelectHorizontal
+        choices=list(range(1, 8)),
+        widget=widgets.RadioSelectHorizontal,
     )
     risk_crypto = models.IntegerField(
         label="How financially risky do you consider cryptocurrencies to be?",
-        choices=list(range(1,8)), widget=widgets.RadioSelectHorizontal
+        choices=list(range(1, 8)),
+        widget=widgets.RadioSelectHorizontal,
     )
     risk_equity = models.IntegerField(
         label="How financially risky do you consider equities to be?",
-        choices=list(range(1,8)), widget=widgets.RadioSelectHorizontal
+        choices=list(range(1, 8)),
+        widget=widgets.RadioSelectHorizontal,
     )
-    risk_bond   = models.IntegerField(
+    risk_bond = models.IntegerField(
         label="How financially risky do you consider bonds to be?",
-        choices=list(range(1,8)), widget=widgets.RadioSelectHorizontal
+        choices=list(range(1, 8)),
+        widget=widgets.RadioSelectHorizontal,
     )
 
-    # Numeracy test fields
     numq_1  = models.IntegerField(blank=True)
     numq_2  = models.IntegerField(blank=True)
     numq_3  = models.IntegerField(blank=True)

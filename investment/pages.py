@@ -2,6 +2,7 @@ import math
 from otree.api import Page
 from .models import Constants, NUMERACY_QUESTIONS
 
+
 class Consent(Page):
     """Round 1: Informed consent."""
     def is_displayed(self):
@@ -27,20 +28,15 @@ class InvestmentDecision(Page):
     form_fields = ['choice']
 
     def is_displayed(self):
-        # pages 3–22 (20 investment frames)
+        # rounds 3–22 (20 investment frames)
         return 3 <= self.round_number <= 22
 
     def vars_for_template(self):
-        # display_round runs 1–20
         display_round = self.round_number - 2
-        # progress from round 1 through 34
         progress_pct = (self.round_number - 1) / Constants.num_rounds * 100
-
-        # pull the right frame
         frame = self.participant.vars['frame_data'][self.round_number - 3]
         columns = []
         for opt in frame['columns']:
-            # build labels like "20% | 9.50€" or "10% | -2.00€"
             labels = [
                 f"{int(p * 100)}% | {pay:.2f}€"
                 for p, pay in zip(opt['probs'], opt['payoffs'])
@@ -50,13 +46,19 @@ class InvestmentDecision(Page):
                 'display_label': opt['display_name'],
                 'outcome_labels': labels,
             })
-
         return {
             'display_round': display_round,
             'frame_name':    frame['frame'],
             'columns':       columns,
             'progress_pct':  f"{progress_pct:.0f}",
         }
+
+    def before_next_page(self):
+        # record scenario metadata for CSV export
+        frame = self.participant.vars['frame_data'][self.round_number - 3]
+        self.player.scenario_name    = frame['scenario_name']
+        self.player.scale_multiplier = frame['scale_multiplier']
+        self.player.frame_type       = frame['frame']
 
 
 class PostExperimentSurvey(Page):
@@ -74,6 +76,16 @@ class PostExperimentSurvey(Page):
         return {'progress_pct': f"{pct:.0f}"}
 
 
+class NumeracyIntro(Page):
+    """Round 24: Introduction to numeracy test."""
+    def is_displayed(self):
+        return self.round_number == 24
+
+    def vars_for_template(self):
+        pct = (self.round_number - 1) / Constants.num_rounds * 100
+        return {'progress_pct': f"{pct:.0f}"}
+
+
 class NumeracyTest(Page):
     form_model = 'player'
     timeout_seconds = 10
@@ -81,15 +93,15 @@ class NumeracyTest(Page):
     auto_submit     = True
 
     def is_displayed(self):
-        # pages 24–33
-        return 24 <= self.round_number <= 33
+        # rounds 25–34 (10 numeracy questions)
+        return 25 <= self.round_number <= 34
 
     def get_form_fields(self):
-        idx = self.round_number - 23
+        idx = self.round_number - 24
         return [f'numq_{idx}']
 
     def vars_for_template(self):
-        idx = self.round_number - 23
+        idx = self.round_number - 24
         pct = (self.round_number - 1) / Constants.num_rounds * 100
         return {
             'question_number': idx,
@@ -99,8 +111,8 @@ class NumeracyTest(Page):
 
 
 class ThankYou(Page):
+    """Final thank-you page."""
     def is_displayed(self):
-        # last page
         return self.round_number == Constants.num_rounds
 
     def vars_for_template(self):
@@ -110,8 +122,9 @@ class ThankYou(Page):
 page_sequence = [
     Consent,               # 1
     Instructions,          # 2
-    InvestmentDecision,    # 3–22 (20)
+    InvestmentDecision,    # 3–22
     PostExperimentSurvey,  # 23
-    NumeracyTest,          # 24–33 (10)
-    ThankYou,              # 34
+    NumeracyIntro,         # 24
+    NumeracyTest,          # 25–34
+    ThankYou,              # 35
 ]

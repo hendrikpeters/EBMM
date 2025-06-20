@@ -46,5 +46,4 @@ Here is the EBMM Investment Study prototype.
 
 SECRET_KEY = '8458257623028'
 
-# Du musst INSTALLED_APPS hier nicht befüllen:
 INSTALLED_APPS = ['otree']

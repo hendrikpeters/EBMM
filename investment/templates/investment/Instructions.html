@@ -1,14 +1,12 @@
 {% extends "global/Page.html" %}
 {% block content %}
   <h3>Instructions</h3>
-  <p>Next, you will make a series of choices between three hypothetical investment options.</p>
-  <p>
-    For each decision:
-    <ul>
-      <li>Select your preferred option by clicking its radio button.</li>
-      <li>Click “Next” to proceed.</li>
-    </ul>
-  </p>
-  <p>After completing all decision rounds, you will fill out a short survey about your familiarity with and perception of crypto, equities, and bonds, then finish with a brief numeracy test.</p>
+  <p>In the next section, you will make a series of investment decisions. Each decision presents three investment options, each with three possible returns and their associated probabilities.</p>
+  <p>For example: <strong>50% – €4.00</strong> means you have a 50% chance of earning €4.00.</p>
+  <p>For every round:</p>
+  <ul>
+    <li>Select your preferred investment option by clicking the corresponding radio button.</li>
+    <li>Click “Next” to confirm your choice and proceed to the next screen.</li>
+  </ul>
   {{ next_button }}
 {% endblock %}

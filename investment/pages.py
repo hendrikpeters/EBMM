@@ -8,12 +8,12 @@ class Consent(Page):
         return self.round_number == 1
 
     def vars_for_template(self):
-        # progress = 0%
+        # 0% progress
         return {'progress_pct': "0"}
 
 
 class Instructions(Page):
-    """Round 2: Brief instructions (no headlines)."""
+    """Round 2: Brief instructions."""
     def is_displayed(self):
         return self.round_number == 2
 
@@ -27,26 +27,27 @@ class InvestmentDecision(Page):
     form_fields = ['choice']
 
     def is_displayed(self):
-        # rounds 3–22 inclusive
+        # pages 3–22 (20 investment frames)
         return 3 <= self.round_number <= 22
 
     def vars_for_template(self):
-        # display 1–20
+        # display_round runs 1–20
         display_round = self.round_number - 2
-
-        # progress from 2 intro pages up to this page
+        # progress from round 1 through 34
         progress_pct = (self.round_number - 1) / Constants.num_rounds * 100
 
+        # pull the right frame
         frame = self.participant.vars['frame_data'][self.round_number - 3]
         columns = []
         for opt in frame['columns']:
+            # build labels like "20% | 9.50€" or "10% | -2.00€"
             labels = [
-                f"{int(p * 100)} % – €{pay:.2f}"
+                f"{int(p * 100)}% | {pay:.2f}€"
                 for p, pay in zip(opt['probs'], opt['payoffs'])
             ]
             columns.append({
-                'asset_class':    opt['asset_class'],
-                'display_label':  opt['display_name'],
+                'asset_class':   opt['asset_class'],
+                'display_label': opt['display_name'],
                 'outcome_labels': labels,
             })
 
@@ -62,7 +63,7 @@ class PostExperimentSurvey(Page):
     form_model = 'player'
     form_fields = [
         'fam_crypto', 'fam_equity', 'fam_bond',
-        'risk_crypto', 'risk_equity', 'risk_bond',
+        'risk_crypto','risk_equity','risk_bond',
     ]
 
     def is_displayed(self):
@@ -76,11 +77,11 @@ class PostExperimentSurvey(Page):
 class NumeracyTest(Page):
     form_model = 'player'
     timeout_seconds = 10
-    timer_text      = "Verbleibende Zeit:"
+    timer_text      = "Time remaining:"
     auto_submit     = True
 
     def is_displayed(self):
-        # rounds 24–33 inclusive
+        # pages 24–33
         return 24 <= self.round_number <= 33
 
     def get_form_fields(self):
@@ -99,7 +100,8 @@ class NumeracyTest(Page):
 
 class ThankYou(Page):
     def is_displayed(self):
-        return self.round_number == Constants.num_rounds  # now 34
+        # last page
+        return self.round_number == Constants.num_rounds
 
     def vars_for_template(self):
         return {'progress_pct': "100"}
@@ -108,8 +110,8 @@ class ThankYou(Page):
 page_sequence = [
     Consent,               # 1
     Instructions,          # 2
-    InvestmentDecision,    # 3–22 (20 pages)
+    InvestmentDecision,    # 3–22 (20)
     PostExperimentSurvey,  # 23
-    NumeracyTest,          # 24–33 (10 pages)
+    NumeracyTest,          # 24–33 (10)
     ThankYou,              # 34
 ]

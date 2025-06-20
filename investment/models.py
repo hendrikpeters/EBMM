@@ -7,7 +7,9 @@ from otree.api import (
 class Constants(BaseConstants):
     name_in_url       = 'investment'
     players_per_group = None
-    num_rounds        = 34  # 10 blind + 10 named + 1 survey + 10 numeracy + 1 thank you
+    # 10 blind + 10 named + 1 consent + 1 instructions + 1 survey +
+    # 1 intro + 10 numeracy + 1 thank you = 35 rounds
+    num_rounds        = 35
 
 # Basic lottery parameters
 PROBS = {
@@ -16,14 +18,34 @@ PROBS = {
     "bond":   (0.80, 0.10, 0.10),
 }
 PAYMENTS = {
-    "crypto": (9.50, 2.00, 0.50),
-    "equity": (4.00, 1.80, 0.50),
-    "bond":   (2.50, 1.00, 0.50),
+    "crypto": (9.50, -2.00, -0.50),
+    "equity": (4.00, -1.80, -0.50),
+    "bond":   (2.50, 0.00, -0.50),
 }
+
+# Expanded descriptive labels
 LABELS = {
-    "crypto": ["Bitcoin","Ethereum","Solana","Avalanche","Dogecoin"],
-    "equity": ["AAPL","NVDA","MSFT","TSLA","AMZN"],
-    "bond":   ["US Treasury 10 Y","Bund 5 Y","UK Gilt 2 Y","OAT 8 Y","JGB 3 Y"],
+    "crypto": [
+        "Bitcoin (BTC, Cryptocurrency)",
+        "Ethereum (ETH, Cryptocurrency)",
+        "Solana (SOL, Cryptocurrency)",
+        "Avalanche (AVAX, Cryptocurrency)",
+        "Dogecoin (DOGE, Cryptocurrency)",
+    ],
+    "equity": [
+        "Apple Inc. (AAPL, Equity)",
+        "NVIDIA Corp. (NVDA, Equity)",
+        "Microsoft Corp. (MSFT, Equity)",
+        "Tesla Inc. (TSLA, Equity)",
+        "Amazon.com Inc. (AMZN, Equity)",
+    ],
+    "bond": [
+        "US Treasury 10Y (US, Bond)",
+        "Bund 5Y (Germany, Bond)",
+        "UK Gilt 2Y (UK, Bond)",
+        "OAT 8Y (France, Bond)",
+        "JGB 3Y (Japan, Bond)",
+    ],
 }
 
 ASSET_LABEL_MAP = {
@@ -32,18 +54,18 @@ ASSET_LABEL_MAP = {
     "bond":   "Asset C",
 }
 
-# Numeracy questions
+# Updated numeracy questions
 NUMERACY_QUESTIONS = [
-    "Out of 100 people, 5% have a rare disease. How many people is that?",
-    "Out of 1,000 passengers, 2% have a ticket. How many passengers is that?",
-    "In an urn there are 50 balls, 20% of them are red. How many red balls?",
-    "A test has a hit rate of 90%. How many correct results out of 100 tests?",
-    "5% of €200 is how many euros?",
-    "20% of 150 is how much?",
-    "Out of 500 participants, 10% remain. How many participants?",
-    "If 0.5% of the population is 1% of a group, how many percent remain?",
-    "8% of 125 equals how much?",
-    "Out of 250 people, 4% have blue eyes. How many people?"
+    "25% of 80 students passed an exam. How many students is that?",
+    "A product costs €200. A 50% discount is applied. What is the discount amount?",
+    "8 out of 40 bulbs are faulty. What percentage are faulty?",
+    "A fair 6-sided die is rolled 60 times. How many times is a 6 expected?",
+    "A train is on time 19 days out of 20. Over 100 days, how many days is it late?",
+    "If 6 out of 30 raffle tickets win a prize, how many winning tickets are expected out of 150?",
+    "4 out of 100 deliveries arrive late. If the company improves its service and cuts the delay rate in half, how many late deliveries are expected out of 100?",
+    "A city has 2,000 buses. 15% are electric. How many buses are not electric?",
+    "60% of people have smartphones. Of those, 50% use Android. What percent of all people use Android?",
+    "In a survey of 1,000 people, 40% drink coffee. Of those, 25% prefer espresso. How many people prefer espresso?"
 ]
 
 def init_participant(pid, seed=None):
@@ -58,7 +80,6 @@ def next_label(state, asset_class):
     return bag.pop()
 
 def build_lotteries(state):
-    """Build 10 rounds of lottery specs (first 5 fixed, next 5 scaled)."""
     rng = state["rng"]
     rounds = []
     # Rounds 1–5: fixed payoffs
@@ -72,9 +93,8 @@ def build_lotteries(state):
             for ac in PROBS
         }
         rounds.append(spec)
-    # Rounds 6–10: scaled payoffs
-    for _ in range(5):
-        s = rng.uniform(0.85, 1.20)
+    # Rounds 6–10: scaled payoffs with fixed multipliers
+    for s in [0.25, 2, 5, 7, 9.5]:
         spec = {
             ac: {
                 "probs":   PROBS[ac],
@@ -87,10 +107,6 @@ def build_lotteries(state):
     return rounds
 
 def make_frames(state, lotteries):
-    """
-    First build 10 blind frames (random order but fixed Asset A/B/C labels),
-    then 10 named frames (random order with real labels).
-    """
     frames = []
     rng = state["rng"]
 
@@ -131,7 +147,6 @@ def generate_participant_tables(pid, seed=None):
     lotteries = build_lotteries(state)
     return make_frames(state, lotteries)
 
-
 class Subsession(BaseSubsession):
     def creating_session(self):
         for p in self.get_players():
@@ -139,42 +154,31 @@ class Subsession(BaseSubsession):
                 p.participant.id_in_session
             )
 
-
 class Group(BaseGroup):
     pass
 
-
 class Player(BasePlayer):
-    # Investment choice
     choice      = models.StringField()
 
-    # Post-experiment survey
     fam_crypto  = models.IntegerField(
-        label="How familiar are you with Crypto?",
-        choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal
-    )
+        label="How familiar are you with cryptocurrencies?",
+        choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal)
     fam_equity  = models.IntegerField(
-        label="How familiar are you with Equities?",
-        choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal
-    )
+        label="How familiar are you with equities (e.g., stocks)?",
+        choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal)
     fam_bond    = models.IntegerField(
-        label="How familiar are you with Bonds?",
-        choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal
-    )
+        label="How familiar are you with bonds (e.g., government or corporate)?",
+        choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal)
     risk_crypto = models.IntegerField(
-        label="How do you assess the risk of Crypto?",
-        choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal
-    )
+        label="How financially risky do you consider cryptocurrencies to be?",
+        choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal)
     risk_equity = models.IntegerField(
-        label="How do you assess the risk of Equities?",
-        choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal
-    )
+        label="How financially risky do you consider equities to be?",
+        choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal)
     risk_bond   = models.IntegerField(
-        label="How do you assess the risk of Bonds?",
-        choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal
-    )
+        label="How financially risky do you consider bonds to be?",
+        choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal)
 
-    # Numeracy test
     numq_1   = models.IntegerField(blank=True)
     numq_2   = models.IntegerField(blank=True)
     numq_3   = models.IntegerField(blank=True)

@@ -94,7 +94,7 @@ SCENARIOS = [
     },
 ]
 
-# --- Fixed multipliers for Rounds 6–10 & 16–20 ---
+# --- Fixed multipliers ---
 MULTIPLIERS = [0.25, 2, 5, 7, 9.5]
 
 assert len(SCENARIOS) == len(MULTIPLIERS), "SCENARIOS and MULTIPLIERS must be the same length"
@@ -250,7 +250,7 @@ class Group(BaseGroup):
 class Player(BasePlayer):
     choice = models.StringField()
 
-    # New metadata fields for CSV export
+    # metadata fields for CSV export
     scenario_name    = models.StringField()
     scale_multiplier = models.FloatField()
     frame_type       = models.StringField()

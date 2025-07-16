@@ -1,7 +1,10 @@
 # models.py
 
 import random
-from otree.api import BaseConstants, BaseSubsession, BaseGroup, BasePlayer, models, widgets
+from otree.api import (
+    BaseConstants, BaseSubsession, BaseGroup, BasePlayer,
+    models, widgets
+)
 
 class Constants(BaseConstants):
     name_in_url = 'investment'
@@ -25,79 +28,81 @@ NUMERACY_QUESTIONS = [
     "In a survey of 1,000 people, 40% drink coffee. Of those, 25% prefer espresso. How many people prefer espresso?",
 ]
 
-# --- Scenario Definitions (5 scenarios, each yields 5 frames per block, 4 blocks total = 20 decision rounds) ---
-SCENARIOS = [
+# --- Scenario Definitions (5 LOTTERIES, each yields 5 frames per block, 4 blocks total = 20 decision rounds) ---
+LOTTERIES = [
     {
-        "name": "Scenario 1",
+        "name": "Lottery 1",
         "PROBS": {
-            "crypto": (0.20, 0.10, 0.70),
-            "equity": (0.50, 0.20, 0.30),
-            "bond":   (0.80, 0.10, 0.10),
+            "crypto": (0.08, 0.65, 0.27),
+            "equity": (0.32, 0.48, 0.20),
+            "bond":   (0.42, 0.48, 0.10),
         },
         "PAYMENTS": {
-            "crypto": (9.50, -2.00, -0.50),
-            "equity": (4.00, -1.80, -0.50),
-            "bond":   (2.50,  0.00, -0.50),
+            "crypto": (20.00,  4.77, -10.00),
+            "equity": ( 9.00,  0.25,  -5.00),
+            "bond":   ( 4.50,  0.54,  -1.50),
         },
     },
     {
-        "name": "Scenario 2",
+        "name": "Lottery 2",
         "PROBS": {
-            "bond":   (0.80, 0.10, 0.10),
-            "equity": (0.50, 0.30, 0.20),
-            "crypto": (0.15, 0.10, 0.75),
+            "crypto": (0.12, 0.58, 0.30),
+            "equity": (0.28, 0.52, 0.20),
+            "bond":   (0.40, 0.52, 0.08),
         },
         "PAYMENTS": {
-            "bond":   (2.60,  -0.40, -0.20),
-            "equity": (3.80,  -1.80, -0.50),
-            "crypto": (10.50, -2.50, -0.50),
+            "crypto": (21.00,  4.79, -11.00),
+            "equity": (10.00,  0.38,  -5.00),
+            "bond":   ( 4.00,  0.92,  -1.00),
         },
     },
     {
-        "name": "Scenario 3",
+        "name": "Lottery 3",
         "PROBS": {
-            "bond":   (0.85, 0.10, 0.05),
-            "equity": (0.50, 0.30, 0.20),
-            "crypto": (0.15, 0.10, 0.75),
+            "crypto": (0.09, 0.62, 0.29),
+            "equity": (0.30, 0.50, 0.20),
+            "bond":   (0.38, 0.55, 0.07),
         },
         "PAYMENTS": {
-            "bond":   (2.40,   0.00, -0.50),
-            "equity": (4.00,  -1.50, -0.50),
-            "crypto": (10.00, -2.50, -0.50),
+            "crypto": (20.00,  5.00, -10.00),
+            "equity": ( 9.00,  0.20,  -4.00),
+            "bond":   ( 4.50,  0.65,  -1.00),
         },
     },
     {
-        "name": "Scenario 4",
+        "name": "Lottery 4",
         "PROBS": {
-            "bond":   (0.90, 0.05, 0.05),
-            "equity": (0.45, 0.30, 0.25),
-            "crypto": (0.10, 0.15, 0.75),
+            "crypto": (0.11, 0.57, 0.32),
+            "equity": (0.29, 0.51, 0.20),
+            "bond":   (0.41, 0.49, 0.10),
         },
         "PAYMENTS": {
-            "bond":   (2.20,   0.00, -0.50),
-            "equity": (4.50,  -1.80, -0.50),
-            "crypto": (11.00, -2.00, -0.50),
+            "crypto": (22.00,  4.88, -10.00),
+            "equity": ( 9.50,  0.48,  -5.00),
+            "bond":   ( 4.00,  1.14,  -2.00),
         },
     },
     {
-        "name": "Scenario 5",
+        "name": "Lottery 5",
         "PROBS": {
-            "bond":   (0.75, 0.20, 0.05),
-            "equity": (0.50, 0.30, 0.20),
-            "crypto": (0.15, 0.10, 0.75),
+            "crypto": (0.10, 0.55, 0.35),
+            "equity": (0.31, 0.47, 0.22),
+            "bond":   (0.39, 0.51, 0.10),
         },
         "PAYMENTS": {
-            "bond":   (2.50,   0.00, -0.50),
-            "equity": (3.80,  -1.80, -0.50),
-            "crypto": (10.50, -2.50, -0.50),
+            "crypto": (19.00,  5.91,  -9.00),
+            "equity": ( 9.00,  1.13,  -6.00),
+            "bond":   ( 4.00,  1.06,  -1.00),
         },
     },
 ]
 
+
 # --- Fixed multipliers ---
 MULTIPLIERS = [0.25, 2, 5, 7, 9.5]
 
-assert len(SCENARIOS) == len(MULTIPLIERS), "SCENARIOS and MULTIPLIERS must be the same length"
+assert len(LOTTERIES) == len(MULTIPLIERS), \
+    "LOTTERIES and MULTIPLIERS must be the same length"
 
 # --- Label pools for named frames ---
 LABELS = {
@@ -133,15 +138,28 @@ ASSET_LABEL_MAP = {
 
 def init_participant(pid, seed=None):
     rng = random.Random(seed or pid)
-    label_bags = {k: rng.sample(v, len(v)) for k, v in LABELS.items()}
-    frame_order = rng.choice([("blind", "named"), ("named", "blind")])
-    return {"rng": rng, "label_bags": label_bags, "frame_order": frame_order}
+    label_bags = {
+        k: rng.sample(v, len(v))
+        for k, v in LABELS.items()
+    }
+    frame_order = rng.choice([
+        ("blind", "named"),
+        ("named", "blind")
+    ])
+    return {
+        "rng": rng,
+        "label_bags": label_bags,
+        "frame_order": frame_order
+    }
 
 
 def next_label(state, asset_class):
     bag = state["label_bags"][asset_class]
     if not bag:
-        bag[:] = state["rng"].sample(LABELS[asset_class], len(LABELS[asset_class]))
+        bag[:] = state["rng"].sample(
+            LABELS[asset_class],
+            len(LABELS[asset_class])
+        )
     return bag.pop()
 
 
@@ -153,7 +171,7 @@ def make_frames(state):
     named_scale = []
 
     # 1) Blind, no scale
-    for scen in SCENARIOS:
+    for scen in LOTTERIES:
         order = rng.sample(list(scen["PROBS"].keys()), 3)
         cols = [{
             "asset_class": ac,
@@ -162,14 +180,14 @@ def make_frames(state):
             "payoffs": scen["PAYMENTS"][ac],
         } for ac in order]
         blind_noscale.append({
-            "frame":            "blind",
-            "scenario_name":    scen["name"],
+            "frame": "blind",
+            "scenario_name": scen["name"],
             "scale_multiplier": 1.0,
-            "columns":          cols,
+            "columns": cols,
         })
 
     # 2) Blind, scaled
-    for scen, m in zip(SCENARIOS, MULTIPLIERS):
+    for scen, m in zip(LOTTERIES, MULTIPLIERS):
         order = rng.sample(list(scen["PROBS"].keys()), 3)
         cols = [{
             "asset_class": ac,
@@ -178,14 +196,14 @@ def make_frames(state):
             "payoffs": tuple(round(x * m, 2) for x in scen["PAYMENTS"][ac]),
         } for ac in order]
         blind_scale.append({
-            "frame":            "blind",
-            "scenario_name":    scen["name"],
+            "frame": "blind",
+            "scenario_name": scen["name"],
             "scale_multiplier": m,
-            "columns":          cols,
+            "columns": cols,
         })
 
     # 3) Named, no scale
-    for scen in SCENARIOS:
+    for scen in LOTTERIES:
         order = rng.sample(list(scen["PROBS"].keys()), 3)
         cols = [{
             "asset_class": ac,
@@ -194,14 +212,14 @@ def make_frames(state):
             "payoffs": scen["PAYMENTS"][ac],
         } for ac in order]
         named_noscale.append({
-            "frame":            "named",
-            "scenario_name":    scen["name"],
+            "frame": "named",
+            "scenario_name": scen["name"],
             "scale_multiplier": 1.0,
-            "columns":          cols,
+            "columns": cols,
         })
 
     # 4) Named, scaled
-    for scen, m in zip(SCENARIOS, MULTIPLIERS):
+    for scen, m in zip(LOTTERIES, MULTIPLIERS):
         order = rng.sample(list(scen["PROBS"].keys()), 3)
         cols = [{
             "asset_class": ac,
@@ -210,10 +228,10 @@ def make_frames(state):
             "payoffs": tuple(round(x * m, 2) for x in scen["PAYMENTS"][ac]),
         } for ac in order]
         named_scale.append({
-            "frame":            "named",
-            "scenario_name":    scen["name"],
+            "frame": "named",
+            "scenario_name": scen["name"],
             "scale_multiplier": m,
-            "columns":          cols,
+            "columns": cols,
         })
 
     first, second = state["frame_order"]
@@ -223,7 +241,6 @@ def make_frames(state):
     }
     combined = block_map[first] + block_map[second]
 
-    # assign display rounds 1–20
     for i, frame in enumerate(combined, start=1):
         frame["round"] = i
 
@@ -238,9 +255,10 @@ def generate_participant_tables(pid, seed=None):
 class Subsession(BaseSubsession):
     def creating_session(self):
         for p in self.get_players():
-            p.participant.vars["frame_data"] = generate_participant_tables(
-                p.participant.id_in_session
-            )
+            p.participant.vars["frame_data"] = \
+                generate_participant_tables(
+                    p.participant.id_in_session
+                )
 
 
 class Group(BaseGroup):
@@ -260,7 +278,10 @@ class Player(BasePlayer):
         frames = self.participant.vars.get("frame_data", [])
         if 0 <= frame_index < len(frames):
             frame = frames[frame_index]
-            return [(col["asset_class"], col["display_name"]) for col in frame["columns"]]
+            return [
+                (col["asset_class"], col["display_name"])
+                for col in frame["columns"]
+            ]
         return []
 
     fam_crypto = models.IntegerField(

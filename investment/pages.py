@@ -38,7 +38,7 @@ class InvestmentDecision(Page):
         columns = []
         for opt in frame['columns']:
             labels = [
-                f"{int(p * 100)}% | {pay:.2f}€"
+                f"{round(p * 100)}% | {pay:.2f}€"
                 for p, pay in zip(opt['probs'], opt['payoffs'])
             ]
             columns.append({
